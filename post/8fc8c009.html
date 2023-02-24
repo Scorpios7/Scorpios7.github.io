@@ -1,0 +1,250 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>HashMap的遍历方式与性能分析 | LIMの博客</title><meta name="author" content="LIM"><meta name="copyright" content="LIM"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="文章内容来自https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;zQBN3UvJDhRTKP6SzcZFKw HashMap 遍历HashMap 遍历从大的方向来说，可分为以下 4 类：  迭代器（Iterator）方式遍历； For Each 方式遍历； Lambda 表达式遍历（JDK 1.8+）; Streams API 遍历（JDK 1.8+）。  但每种类型下又有不同的实现方式，因此具">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HashMap的遍历方式与性能分析">
+<meta property="og:url" content="http://example.com/post/8fc8c009.html">
+<meta property="og:site_name" content="LIMの博客">
+<meta property="og:description" content="文章内容来自https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;zQBN3UvJDhRTKP6SzcZFKw HashMap 遍历HashMap 遍历从大的方向来说，可分为以下 4 类：  迭代器（Iterator）方式遍历； For Each 方式遍历； Lambda 表达式遍历（JDK 1.8+）; Streams API 遍历（JDK 1.8+）。  但每种类型下又有不同的实现方式，因此具">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/wallhaven-6q6e9l.jpg">
+<meta property="article:published_time" content="2023-02-24T03:01:42.000Z">
+<meta property="article:modified_time" content="2023-02-24T03:14:42.822Z">
+<meta property="article:author" content="LIM">
+<meta property="article:tag" content="面试">
+<meta property="article:tag" content="java集合">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/wallhaven-6q6e9l.jpg"><link rel="shortcut icon" href="/img/letter-l.png"><link rel="canonical" href="http://example.com/post/8fc8c009.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  }
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'HashMap的遍历方式与性能分析',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-02-24 11:14:42'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = url => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      link.onload = () => resolve()
+      link.onerror = () => reject()
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/background.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/3534643.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 时间轴</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fa fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="LIMの博客"><span class="site-name">LIMの博客</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 时间轴</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fa fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">HashMap的遍历方式与性能分析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-02-24T03:01:42.000Z" title="发表于 2023-02-24 11:01:42">2023-02-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-02-24T03:14:42.822Z" title="更新于 2023-02-24 11:14:42">2023-02-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="HashMap的遍历方式与性能分析"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="post-content" id="article-container"><p>文章内容来自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/zQBN3UvJDhRTKP6SzcZFKw">https://mp.weixin.qq.com/s/zQBN3UvJDhRTKP6SzcZFKw</a></p>
+<h2 id="HashMap-遍历"><a href="#HashMap-遍历" class="headerlink" title="HashMap 遍历"></a>HashMap 遍历</h2><p>HashMap <strong>遍历从大的方向来说，可分为以下 4 类</strong>：</p>
+<ol>
+<li>迭代器（Iterator）方式遍历；</li>
+<li>For Each 方式遍历；</li>
+<li>Lambda 表达式遍历（JDK 1.8+）;</li>
+<li>Streams API 遍历（JDK 1.8+）。</li>
+</ol>
+<p>但每种类型下又有不同的实现方式，因此具体的遍历方式又可以分为以下 7 种：</p>
+<ol>
+<li>使用迭代器（Iterator）EntrySet 的方式进行遍历；</li>
+<li>使用迭代器（Iterator）KeySet 的方式进行遍历；</li>
+<li>使用 For Each EntrySet 的方式进行遍历；</li>
+<li>使用 For Each KeySet 的方式进行遍历；</li>
+<li>使用 Lambda 表达式的方式进行遍历；</li>
+<li>使用 Streams API 单线程的方式进行遍历；</li>
+<li>使用 Streams API 多线程的方式进行遍历。</li>
+</ol>
+<p>接下来我们来看每种遍历方式的具体实现代码。</p>
+<h3 id="1-迭代器-EntrySet"><a href="#1-迭代器-EntrySet" class="headerlink" title="1.迭代器 EntrySet"></a>1.迭代器 EntrySet</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        Iterator&lt;Map.Entry&lt;Integer, String&gt;&gt; iterator = map.entrySet().iterator();</span><br><span class="line">        <span class="keyword">while</span> (iterator.hasNext()) &#123;</span><br><span class="line">            Map.Entry&lt;Integer, String&gt; entry = iterator.next();</span><br><span class="line">            System.out.println(entry.getKey());</span><br><span class="line">            System.out.println(entry.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-迭代器-KeySet"><a href="#2-迭代器-KeySet" class="headerlink" title="2.迭代器 KeySet"></a>2.迭代器 KeySet</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        Iterator&lt;Integer&gt; iterator = map.keySet().iterator();</span><br><span class="line">        <span class="keyword">while</span> (iterator.hasNext()) &#123;</span><br><span class="line">            <span class="type">Integer</span> <span class="variable">key</span> <span class="operator">=</span> iterator.next();</span><br><span class="line">            System.out.println(key);</span><br><span class="line">            System.out.println(map.get(key));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-ForEach-EntrySet"><a href="#3-ForEach-EntrySet" class="headerlink" title="3.ForEach EntrySet"></a>3.ForEach EntrySet</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;Integer, String&gt; entry : map.entrySet()) &#123;</span><br><span class="line">            System.out.println(entry.getKey());</span><br><span class="line">            System.out.println(entry.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-ForEach-KeySet"><a href="#4-ForEach-KeySet" class="headerlink" title="4.ForEach KeySet"></a>4.ForEach KeySet</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        <span class="keyword">for</span> (Integer key : map.keySet()) &#123;</span><br><span class="line">            System.out.println(key);</span><br><span class="line">            System.out.println(map.get(key));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-Lambda"><a href="#5-Lambda" class="headerlink" title="5.Lambda"></a>5.Lambda</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        map.forEach((key, value) -&gt; &#123;</span><br><span class="line">            System.out.println(key);</span><br><span class="line">            System.out.println(value);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-Streams-API-单线程"><a href="#6-Streams-API-单线程" class="headerlink" title="6.Streams API 单线程"></a>6.Streams API 单线程</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        map.entrySet().stream().forEach((entry) -&gt; &#123;</span><br><span class="line">            System.out.println(entry.getKey());</span><br><span class="line">            System.out.println(entry.getValue());</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-Streams-API-多线程"><a href="#7-Streams-API-多线程" class="headerlink" title="7.Streams API 多线程"></a>7.Streams API 多线程</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HashMapTest</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并赋值 HashMap</span></span><br><span class="line">        Map&lt;Integer, String&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        map.put(<span class="number">1</span>, <span class="string">&quot;Java&quot;</span>);</span><br><span class="line">        map.put(<span class="number">2</span>, <span class="string">&quot;JDK&quot;</span>);</span><br><span class="line">        map.put(<span class="number">3</span>, <span class="string">&quot;Spring Framework&quot;</span>);</span><br><span class="line">        map.put(<span class="number">4</span>, <span class="string">&quot;MyBatis framework&quot;</span>);</span><br><span class="line">        <span class="comment">// 遍历</span></span><br><span class="line">        map.entrySet().parallelStream().forEach((entry) -&gt; &#123;</span><br><span class="line">            System.out.println(entry.getKey());</span><br><span class="line">            System.out.println(entry.getValue());</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="性能分析"><a href="#性能分析" class="headerlink" title="性能分析"></a>性能分析</h2><p>parallelStream 为多线程版本性能一定是最好的，所以就不参与测试了，其他 6 个方法的测试结果如下：</p>
+<img src="/post/8fc8c009/640" class title="图片">
+
+<p>其中 Units 为 ns&#x2F;op 意思是执行完成时间（单位为纳秒），而 Score 列为平均执行时间， <code>±</code> 符号表示误差。从以上结果可以看出，两个 <code>entrySet</code> 的性能相近，并且执行速度最快，接下来是 <code>stream</code> ，然后是两个 <code>keySet</code>，性能最差的是 <code>KeySet</code> 。</p>
+<blockquote>
+<p>​	<code>EntrySet</code> 之所以比 <code>KeySet</code> 的性能高是因为，<code>KeySet</code> 在循环时使用了 <code>map.get(key)</code>，而 <code>map.get(key)</code> 相当于又遍历了一遍 Map 集合去查询 <code>key</code> 所对应的值。为什么要用“又”这个词？那是因为<strong>在使用迭代器或者 for 循环时，其实已经遍历了一遍 Map 集合了，因此再使用 <code>map.get(key)</code> 查询时，相当于遍历了两遍</strong>。</p>
+<p>而 <code>EntrySet</code> 只遍历了一遍 Map 集合，之后通过代码“Entry&lt;Integer, String&gt; entry &#x3D; iterator.next()”把对象的 <code>key</code> 和 <code>value</code> 值都放入到了 <code>Entry</code> 对象中，因此再获取 <code>key</code> 和 <code>value</code> 值时就无需再遍历 Map 集合，只需要从 <code>Entry</code> 对象中取值就可以了。</p>
+<p>所以，**<code>EntrySet</code> 的性能比 <code>KeySet</code> 的性能高出了一倍，因为 <code>KeySet</code> 相当于循环了两遍 Map 集合，而 <code>EntrySet</code> 只循环了一遍**。</p>
+</blockquote>
+<h2 id="安全性测试"><a href="#安全性测试" class="headerlink" title="安全性测试"></a>安全性测试</h2><p>以上遍历划分为四类进行测试：迭代器方式、For 循环方式、Lambda 方式和 Stream 方式，测试代码如下。</p>
+<h3 id="1-迭代器方式"><a href="#1-迭代器方式" class="headerlink" title="1.迭代器方式"></a>1.迭代器方式</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Iterator&lt;Map.Entry&lt;Integer, String&gt;&gt; iterator = map.entrySet().iterator();</span><br><span class="line">while (iterator.hasNext()) &#123;</span><br><span class="line">    Map.Entry&lt;Integer, String&gt; entry = iterator.next();</span><br><span class="line">    if (entry.getKey() == 1) &#123;</span><br><span class="line">        // 删除</span><br><span class="line">        System.out.println(&quot;del:&quot; + entry.getKey());</span><br><span class="line">        iterator.remove();</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        System.out.println(&quot;show:&quot; + entry.getKey());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<blockquote>
+<p>show:0</p>
+<p>del:1</p>
+<p>show:2</p>
+</blockquote>
+<p>测试结果：<strong>迭代器中循环删除数据安全</strong>。</p>
+<h3 id="2-For-循环方式"><a href="#2-For-循环方式" class="headerlink" title="2.For 循环方式"></a>2.For 循环方式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (Map.Entry&lt;Integer, String&gt; entry : map.entrySet()) &#123;</span><br><span class="line">    <span class="keyword">if</span> (entry.getKey() == <span class="number">1</span>) &#123;</span><br><span class="line">        <span class="comment">// 删除</span></span><br><span class="line">        System.out.println(<span class="string">&quot;del:&quot;</span> + entry.getKey());</span><br><span class="line">        map.remove(entry.getKey());</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;show:&quot;</span> + entry.getKey());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<p><img src="https://mmbiz.qpic.cn/mmbiz_png/HrWw6ZuXCsgeYXAj2Uedoee2ibmnwMYLeNvpPu2pJYU0X9Ugiccpk5niatosXe6NndnicYeFLyIXx8tv8s0A7eRs8Q/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p>测试结果：<strong>For 循环中删除数据非安全</strong>。</p>
+<h3 id="3-Lambda-方式"><a href="#3-Lambda-方式" class="headerlink" title="3.Lambda 方式"></a>3.Lambda 方式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">map.forEach((key, value) -&gt; &#123;</span><br><span class="line">    <span class="keyword">if</span> (key == <span class="number">1</span>) &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;del:&quot;</span> + key);</span><br><span class="line">        map.remove(key);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;show:&quot;</span> + key);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<img src="/post/8fc8c009/640" class title="图片">
+
+<p>测试结果：<strong>Lambda 循环中删除数据非安全</strong>。</p>
+<p><strong>Lambda 删除的正确方式</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// 根据 map 中的 key 去判断删除</span><br><span class="line">map.keySet().removeIf(key -&gt; key == 1);</span><br><span class="line">map.forEach((key, value) -&gt; &#123;</span><br><span class="line">    System.out.println(&quot;show:&quot; + key);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<blockquote>
+<p>show:0</p>
+<p>show:2</p>
+</blockquote>
+<p>从上面的代码可以看出，可以先使用 <code>Lambda</code> 的 <code>removeIf</code> 删除多余的数据，再进行循环是一种正确操作集合的方式。</p>
+<h3 id="4-Stream-方式"><a href="#4-Stream-方式" class="headerlink" title="4.Stream 方式"></a>4.Stream 方式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">map.entrySet().stream().forEach((entry) -&gt; &#123;</span><br><span class="line">    <span class="keyword">if</span> (entry.getKey() == <span class="number">1</span>) &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;del:&quot;</span> + entry.getKey());</span><br><span class="line">        map.remove(entry.getKey());</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;show:&quot;</span> + entry.getKey());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<img src="/post/8fc8c009/640" class title="图片">
+
+<p>测试结果：<strong>Stream 循环中删除数据非安全</strong>。</p>
+<p><strong>Stream 循环的正确方式</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">map.entrySet().stream().filter(m -&gt; 1 != m.getKey()).forEach((entry) -&gt; &#123;</span><br><span class="line">    if (entry.getKey() == 1) &#123;</span><br><span class="line">        System.out.println(&quot;del:&quot; + entry.getKey());</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        System.out.println(&quot;show:&quot; + entry.getKey());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>以上程序的执行结果：</p>
+<blockquote>
+<p>show:0</p>
+<p>show:2</p>
+</blockquote>
+<p>从上面的代码可以看出，可以使用 <code>Stream</code> 中的 <code>filter</code> 过滤掉无用的数据，再进行遍历也是一种安全的操作集合的方式。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>我们不能在遍历中使用集合 <code>map.remove()</code> 来删除数据，这是非安全的操作方式，但我们可以使用迭代器的 <code>iterator.remove()</code> 的方法来删除数据，这是安全的删除集合的方式。同样的我们也可以使用 Lambda 中的 <code>removeIf</code> 来提前删除数据，或者是使用 Stream 中的 <code>filter</code> 过滤掉要删除的数据进行循环，这样都是安全的，当然我们也可以在 <code>for</code> 循环前删除数据在遍历也是线程安全的。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文我们讲了 HashMap 4 种遍历方式：迭代器、for、lambda、stream，以及具体的 7 种遍历方法，综合性能和安全性来看，<strong>我们应该尽量使用迭代器（Iterator）来遍历 <code>EntrySet</code> 的遍历方式来操作 Map 集合</strong>，这样就会既安全又高效了。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="http://example.com">LIM</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/post/8fc8c009.html">http://example.com/post/8fc8c009.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">LIMの博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E9%9D%A2%E8%AF%95/">面试</a><a class="post-meta__tags" href="/tags/java%E9%9B%86%E5%90%88/">java集合</a></div><div class="post_share"><div class="social-share" data-image="/img/wallhaven-6q6e9l.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/post/8d17cdf0.html" title="jwt"><img class="cover" src="/img/wallhaven-mddzq8.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">jwt</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/post/23167f1b.html" title="ArrayList扩容机制"><img class="cover" src="/img/wallhaven-rdzx7w.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-20</div><div class="title">ArrayList扩容机制</div></div></a></div><div><a href="/post/e29c8e30.html" title="java反射"><img class="cover" src="/img/wallhaven-zm8doo.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-19</div><div class="title">java反射</div></div></a></div><div><a href="/post/8d17cdf0.html" title="jwt"><img class="cover" src="/img/wallhaven-mddzq8.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-21</div><div class="title">jwt</div></div></a></div><div><a href="/post/1c53329c.html" title="剑指offer"><img class="cover" src="/img/wallhaven-j3l8vp.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-19</div><div class="title">剑指offer</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/3534643.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">LIM</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Scorpios7"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/Scorpios7" target="_blank" title="Github"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到LIM的知识海洋</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#HashMap-%E9%81%8D%E5%8E%86"><span class="toc-number">1.</span> <span class="toc-text">HashMap 遍历</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E8%BF%AD%E4%BB%A3%E5%99%A8-EntrySet"><span class="toc-number">1.1.</span> <span class="toc-text">1.迭代器 EntrySet</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E8%BF%AD%E4%BB%A3%E5%99%A8-KeySet"><span class="toc-number">1.2.</span> <span class="toc-text">2.迭代器 KeySet</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-ForEach-EntrySet"><span class="toc-number">1.3.</span> <span class="toc-text">3.ForEach EntrySet</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-ForEach-KeySet"><span class="toc-number">1.4.</span> <span class="toc-text">4.ForEach KeySet</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-Lambda"><span class="toc-number">1.5.</span> <span class="toc-text">5.Lambda</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-Streams-API-%E5%8D%95%E7%BA%BF%E7%A8%8B"><span class="toc-number">1.6.</span> <span class="toc-text">6.Streams API 单线程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-Streams-API-%E5%A4%9A%E7%BA%BF%E7%A8%8B"><span class="toc-number">1.7.</span> <span class="toc-text">7.Streams API 多线程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90"><span class="toc-number">2.</span> <span class="toc-text">性能分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%89%E5%85%A8%E6%80%A7%E6%B5%8B%E8%AF%95"><span class="toc-number">3.</span> <span class="toc-text">安全性测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%96%B9%E5%BC%8F"><span class="toc-number">3.1.</span> <span class="toc-text">1.迭代器方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-For-%E5%BE%AA%E7%8E%AF%E6%96%B9%E5%BC%8F"><span class="toc-number">3.2.</span> <span class="toc-text">2.For 循环方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-Lambda-%E6%96%B9%E5%BC%8F"><span class="toc-number">3.3.</span> <span class="toc-text">3.Lambda 方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-Stream-%E6%96%B9%E5%BC%8F"><span class="toc-number">3.4.</span> <span class="toc-text">4.Stream 方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-number">3.5.</span> <span class="toc-text">小结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/post/8fc8c009.html" title="HashMap的遍历方式与性能分析"><img src="/img/wallhaven-6q6e9l.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="HashMap的遍历方式与性能分析"/></a><div class="content"><a class="title" href="/post/8fc8c009.html" title="HashMap的遍历方式与性能分析">HashMap的遍历方式与性能分析</a><time datetime="2023-02-24T03:01:42.000Z" title="发表于 2023-02-24 11:01:42">2023-02-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/8d17cdf0.html" title="jwt"><img src="/img/wallhaven-mddzq8.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="jwt"/></a><div class="content"><a class="title" href="/post/8d17cdf0.html" title="jwt">jwt</a><time datetime="2023-02-21T04:43:20.000Z" title="发表于 2023-02-21 12:43:20">2023-02-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/23167f1b.html" title="ArrayList扩容机制"><img src="/img/wallhaven-rdzx7w.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ArrayList扩容机制"/></a><div class="content"><a class="title" href="/post/23167f1b.html" title="ArrayList扩容机制">ArrayList扩容机制</a><time datetime="2023-02-20T02:51:47.000Z" title="发表于 2023-02-20 10:51:47">2023-02-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/e29c8e30.html" title="java反射"><img src="/img/wallhaven-zm8doo.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="java反射"/></a><div class="content"><a class="title" href="/post/e29c8e30.html" title="java反射">java反射</a><time datetime="2023-02-19T06:51:30.000Z" title="发表于 2023-02-19 14:51:30">2023-02-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/post/1c53329c.html" title="剑指offer"><img src="/img/wallhaven-j3l8vp.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="剑指offer"/></a><div class="content"><a class="title" href="/post/1c53329c.html" title="剑指offer">剑指offer</a><time datetime="2023-02-19T05:18:29.000Z" title="发表于 2023-02-19 13:18:29">2023-02-19</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2023 By LIM</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/fireworks.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
