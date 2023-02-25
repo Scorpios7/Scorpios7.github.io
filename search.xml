@@ -4,6 +4,27 @@
   
     
     <entry>
+      <title>Redis三种常用的缓存读写策略</title>
+      <link href="/post/1f34c3f3.html"/>
+      <url>/post/1f34c3f3.html</url>
+      
+        <content type="html"><![CDATA[<h2 id="Redis三种常用的缓存读写策略"><a href="#Redis三种常用的缓存读写策略" class="headerlink" title="Redis三种常用的缓存读写策略"></a>Redis三种常用的缓存读写策略</h2><p>Redis有三种读写策略分别是：<strong>旁路缓存模式策略、读写穿透策略、异步缓存写入策略。</strong></p><p><strong>这三种缓存读写策略各有优势，不存在最佳，需要我们根据实际的业务场景选择最合适的。</strong></p><h2 id="Cache-Aside-Pattern（旁路缓存模式）"><a href="#Cache-Aside-Pattern（旁路缓存模式）" class="headerlink" title="Cache Aside Pattern（旁路缓存模式）"></a>Cache Aside Pattern（旁路缓存模式）</h2><p><strong>Cache Aside Pattern 是我们平时使用比较多的一个缓存读写模式，比较适合读请求比较多的场景。</strong></p><p>Cache Aside Pattern 中服务端需要同时维系 db 和 cache，并且是以 <code>db</code> 的结果为准。</p><p>下面我们来看一下这个策略模式下的缓存读写步骤。</p><p><strong>写</strong> ：</p><ul><li>先更新 db</li><li>然后直接删除 cache</li></ul><p>如下图：</p><img src="/post/1f34c3f3/image-20230225210620501.png" class title="image-20230225210620501"><p><strong>读</strong> :</p><ul><li>从 cache 中读取数据，读取到就直接返回</li><li>cache 中读取不到的话，就从 db 中读取数据返回</li><li>再把数据放到 cache 中</li></ul><p>步骤如下图</p><img src="/post/1f34c3f3/image-20230225210711860.png" class title="image-20230225210711860"><p>思考这一个问题：<strong>如果在写数据的过程中，可以先删除cache，再更新DB吗？</strong> </p><p><strong>答案：</strong> 答案肯定是不行的，因为这样子可能造成<strong>数据库和缓存数据不一致</strong>的问题，比如这个时候有一个数据在DB和缓存都为100，请求1需要将这个数据更新写成200，如果先删除换出再更新数据库的话，在请求1已经删除缓存但是数据库还没写完的时候，有一个请求2读取数据，首先去缓存读取，发现缓存被删除了，然后去数据库读取得到100（这个时候请求1还没写完）再写入缓存，这个时候请求1写完了，这个时候数据库里数据为200，缓存里为100，不一致。</p><p>这个过程可以简单描述为：</p><blockquote><p>请求 1 先把 cache 中的 A 数据删除 -&gt; 请求 2 从 db 中读取数据-&gt;请求 1 再把 db 中的 A 数据更新</p></blockquote><p><strong>难道在写数据的过程中，先更新 db，后删除 cache 就没有问题了么？</strong></p><p><strong>答案：</strong> 理论上来说还是可能会出现数据不一致性的问题，不过概率非常小，因为缓存的写入速度是比数据库的写入速度快很多。</p><p>举例：请求 1 先读数据 A，请求 2 随后写数据 A，并且数据 A 在请求 1 请求之前不在缓存中的话，也有可能产生数据不一致性的问题。</p><p>这个过程可以简单描述为：</p><blockquote><p>请求 1 从 db 读数据 A-&gt; 请求 2 更新 db 中的数据 A（此时缓存中无数据 A ，故不用执行删除缓存操作 ） -&gt; 请求 1 将数据 A 写入 cache</p></blockquote><p>来分析一下 <strong>Cache Aside Pattern 的缺陷</strong>。</p><p><strong>缺陷 1：首次请求数据一定不在 cache 的问题</strong></p><p>解决办法：可以将热点数据可以提前放入 cache 中。</p><p><strong>缺陷 2：写操作比较频繁的话导致 cache 中的数据会被频繁被删除，这样会影响缓存命中率 。</strong></p><p>解决办法：</p><ul><li>数据库和缓存数据强一致场景 ：更新 db 的时候同样更新 cache，不过我们需要加一个锁&#x2F;分布式锁来保证更新 cache 的时候不存在线程安全问题。</li><li>可以短暂地允许数据库和缓存数据不一致的场景 ：更新 db 的时候同样更新 cache，但是给缓存加一个比较短的过期时间，这样的话就可以保证即使数据不一致的话影响也比较小。</li></ul><h2 id="Read-x2F-Write-Through-Pattern（读写穿透）"><a href="#Read-x2F-Write-Through-Pattern（读写穿透）" class="headerlink" title="Read&#x2F;Write Through Pattern（读写穿透）"></a>Read&#x2F;Write Through Pattern（读写穿透）</h2><p>Read&#x2F;Write Through Pattern 中服务端把 cache 视为主要数据存储，从中读取数据并将数据写入其中。cache 服务负责将此数据读取和写入 db，从而减轻了应用程序的职责。</p><p><strong>写（Write Through）：</strong></p><ul><li>先查 cache，cache 中不存在，直接更新 db。</li><li>cache 中存在，则先更新 cache，然后 cache 服务自己更新 db（<strong>同步更新 cache 和 db</strong>）</li></ul><p>过程如下图</p><img src="/post/1f34c3f3/image-20230225211207040.png" class title="image-20230225211207040"><p><strong>读(Read Through)：</strong></p><ul><li>从 cache 中读取数据，读取到就直接返回 。</li><li>读取不到的话，先从 db 加载，写入到 cache 后返回响应</li></ul><p>过程如下图</p><img src="/post/1f34c3f3/read-through.png" class title="img"><p>Read-Through Pattern 实际只是在 Cache-Aside Pattern 之上进行了封装。在 Cache-Aside Pattern 下，发生读请求的时候，如果 cache 中不存在对应的数据，是由客户端自己负责把数据写入 cache，而 Read Through Pattern 则是 cache 服务自己来写入缓存的，这对客户端是透明的。</p><p>和 Cache Aside Pattern 一样， Read-Through Pattern 也有首次请求数据一定不再 cache 的问题，对于热点数据可以提前放入缓存中。</p><h2 id="Write-Behind-Pattern（异步缓存写入）"><a href="#Write-Behind-Pattern（异步缓存写入）" class="headerlink" title="Write Behind Pattern（异步缓存写入）"></a>Write Behind Pattern（异步缓存写入）</h2><p>Write Behind Pattern 和 Read&#x2F;Write Through Pattern 很相似，两者都是由 cache 服务来负责 cache 和 db 的读写。</p><p>但是，两个又有很大的不同：<strong>Read&#x2F;Write Through 是同步更新 cache 和 db，而 Write Behind 则是只更新缓存，不直接更新 db，而是改为异步批量的方式来更新 db。</strong></p><p>很明显，这种方式对数据一致性带来了更大的挑战，比如 cache 数据可能还没异步更新 db 的话，cache 服务可能就就挂掉了。</p><p>这种策略在我们平时开发过程中也非常非常少见，但是不代表它的应用场景少，比如消息队列中消息的异步写入磁盘、MySQL 的 Innodb Buffer Pool 机制都用到了这种策略。</p><p>Write Behind Pattern 下 db 的写性能非常高，非常适合一些数据经常变化又对数据一致性要求没那么高的场景，比如浏览量、点赞量。</p>]]></content>
+      
+      
+      
+        <tags>
+            
+            <tag> 面试 </tag>
+            
+            <tag> redis </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>布隆过滤器</title>
       <link href="/post/9a0369ec.html"/>
       <url>/post/9a0369ec.html</url>
